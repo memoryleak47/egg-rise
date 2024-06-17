@@ -34,7 +34,7 @@ impl Analysis<Rise> for RiseAnalysis {
 
     fn merge(&mut self, to: &mut Data, from: Data) -> DidMerge {
         let before_len = to.free.len();
-        to.free.extend(from.free);
+        to.free.retain(|x| from.free.contains(x));
         let mut did_change = before_len != to.free.len();
         if !from.beta_extract.as_ref().is_empty() &&
             (to.beta_extract.as_ref().is_empty() ||

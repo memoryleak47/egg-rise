@@ -153,8 +153,9 @@ fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[
             prove_equiv_aux(start, goal, rules(
                 &([
                     "eta", "beta",
-                    "let-app", "let-var-same", "let-var-diff",
-                    "let-lam-same", "let-lam-diff", "let-const"
+                    "opt:let-unused",
+                    "opt:let-app", "opt:let-var-same",
+                    "opt:let-lam-same", "opt:let-lam-diff",
                 ].iter().cloned().chain(rule_names.iter().cloned()).collect::<Vec<_>>()),
                 true
             )),

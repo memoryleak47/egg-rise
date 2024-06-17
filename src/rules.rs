@@ -123,12 +123,9 @@ pub fn rules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<Rise, RiseA
         rewrite!("beta"; "(app (lam ?v ?body) ?e)" => "(let ?v ?e ?body)"),
 
         // OPTIMIZED:
-        /*
-        rewrite!("opt:let-unused"; "(let ?v ?t ?body)" => "?body" if neg(contains_ident(var("?body"), var("?v")))),
+        rewrite!("opt:let-unused"; "(let ?v ?t ?body)" => "?body"),// if neg(contains_ident(var("?body"), var("?v")))),
         rewrite!("opt:let-app"; "(let ?v ?e (app ?a ?b))" => "(app (let ?v ?e ?a) (let ?v ?e ?b))" if or(contains_ident(var("?a"), var("?v")), contains_ident(var("?b"), var("?v")))),
         rewrite!("opt:let-var-same"; "(let ?v1 ?e (var ?v1))" => "?e"),
-        rewrite!("opt:let-var-diff"; "(let ?v1 ?e (var ?v2))" => "(var ?v2)"
-           if is_not_same_var(var("?v1"), var("?v2"))),
         rewrite!("opt:let-lam-same"; "(let ?v1 ?e (lam ?v1 ?body))" => "(lam ?v1 ?body)"),
         rewrite!("opt:let-lam-diff"; "(let ?v1 ?e (lam ?v2 ?body))" =>
            { CaptureAvoid {
@@ -137,9 +134,9 @@ pub fn rules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<Rise, RiseA
                if_free: "(lam ?fresh (let ?v1 ?e (let ?v2 (var ?fresh) ?body)))".parse().unwrap(),
            }}
            if and(is_not_same_var(var("?v1"), var("?v2")), contains_ident(var("?body"), var("?v1")))),
-        */
 
         // UNOPTIMIZED:
+        /*
         rewrite!("let-app"; "(let ?v ?e (app ?a ?b))" => "(app (let ?v ?e ?a) (let ?v ?e ?b))"),
         rewrite!("let-var-same"; "(let ?v1 ?e (var ?v1))" => "?e"),
         rewrite!("let-var-diff"; "(let ?v1 ?e (var ?v2))" => "(var ?v2)"
@@ -153,6 +150,7 @@ pub fn rules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<Rise, RiseA
             }}
             if is_not_same_var(var("?v1"), var("?v2"))),
         rewrite!("let-const"; "(let ?v ?e ?c)" => "?c" if is_const(var("?c"))),
+        */
     ];
     let mut map: HashMap<Symbol, _> = common.into_iter().map(|r| (r.name.to_owned(), r)).collect();
     if use_explicit_subs {
