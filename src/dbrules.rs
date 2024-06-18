@@ -36,6 +36,14 @@ fn neg(f: impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool) -> impl Fn(&mut DBRise
     move |egraph, id, subst| !f(egraph, id, subst)
 }
 
+fn and(f1: impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool, f2: impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool) -> impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool {
+    move |egraph, id, subst| f1(egraph, id, subst) && f2(egraph, id, subst)
+}
+
+fn or(f1: impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool, f2: impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool) -> impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool {
+    move |egraph, id, subst| f1(egraph, id, subst) || f2(egraph, id, subst)
+}
+
 pub fn dbrules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<DBRise, DBRiseAnalysis>> {
     let common = vec![
         // reductions
@@ -130,14 +138,14 @@ pub fn dbrules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<DBRise, D
         // explicit substitution / shifting
         rewrite!("sig-lam"; "(sig ?i (lam ?a) ?b)" =>
             { NumberShiftApplier { var: var("?i"), shift: 1, new_var: var("?ip1"),
-              applier: "(lam (sig ?ip1 ?a ?b))".parse::<Pattern<DBRise>>().unwrap() } }),
-        rewrite!("sig-app"; "(sig ?i (app ?a1 ?a2) ?b)" => "(app (sig ?i ?a1 ?b) (sig ?i ?a2 ?b))"),
+              applier: "(lam (sig ?ip1 ?a ?b))".parse::<Pattern<DBRise>>().unwrap() } } if in_range(var("?a"), var("?i"))),
+        rewrite!("sig-app"; "(sig ?i (app ?a1 ?a2) ?b)" => "(app (sig ?i ?a1 ?b) (sig ?i ?a2 ?b))" if or(in_range(var("?a1"), var("?i")), in_range(var("?a2"), var("?i")))),
         rewrite!("sig-var-const"; "(sig ?i ?n ?b)" =>
             { SigVarConstApplier { i: var("?i"), n: var("?n"), b: var("?b") }}),
         rewrite!("phi-lam"; "(phi ?i ?k (lam ?a))" =>
             { NumberShiftApplier { var: var("?k"), shift: 1, new_var: var("?kp1"),
-              applier: "(lam (phi ?i ?kp1 ?a))".parse::<Pattern<DBRise>>().unwrap() }}),
-        rewrite!("phi-app"; "(phi ?i ?k (app ?a ?b))" => "(app (phi ?i ?k ?a) (phi ?i ?k ?b))"),
+              applier: "(lam (phi ?i ?kp1 ?a))".parse::<Pattern<DBRise>>().unwrap() }} if in_range(var("?a"), var("?k"))),
+        rewrite!("phi-app"; "(phi ?i ?k (app ?a ?b))" => "(app (phi ?i ?k ?a) (phi ?i ?k ?b))" if or(in_range(var("?a"), var("?k")), in_range(var("?b"), var("?k")))),
         rewrite!("phi-var-const"; "(phi ?i ?k ?n)" =>
             { PhiVarConstApplier { i: var("?i"), k: var("?k"), n: var("?n") }}),
     ];
