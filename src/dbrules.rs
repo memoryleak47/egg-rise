@@ -110,10 +110,12 @@ pub fn dbrules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<DBRise, D
         // reductions
         rewrite!("beta"; "(app (lam ?body) ?e)" =>
             { BetaExtractApplier { body: var("?body"), subs: var("?e") } }),
+
         rewrite!("eta"; "(lam (app ?f %0))" =>
             { with_shifted_down(var("?f"), var("?fd"), 1, "?fd".parse::<Pattern<DBRise>>().unwrap()) }
             // TODO: if conditions should be recursive filters?
             if neg(contains_ident(var("?f"), Index(0)))),
+
     ];
     let explicit_substitution = vec![
         // algorithmic
@@ -148,6 +150,10 @@ pub fn dbrules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<DBRise, D
         rewrite!("phi-app"; "(phi ?i ?k (app ?a ?b))" => "(app (phi ?i ?k ?a) (phi ?i ?k ?b))" if or(in_range(var("?a"), var("?k")), in_range(var("?b"), var("?k")))),
         rewrite!("phi-var-const"; "(phi ?i ?k ?n)" =>
             { PhiVarConstApplier { i: var("?i"), k: var("?k"), n: var("?n") }}),
+
+
+        rewrite!("eta-expansion"; "?f" =>
+            { NumberShiftApplier2 { var: var("?f"), new_var: var("?fd"), shift: 1, applier: "(lam (app ?fd %0))".parse::<Pattern<DBRise>>().unwrap()}})
     ];
     let mut map: HashMap<Symbol, _> = common.into_iter().map(|r| (r.name.to_owned(), r)).collect();
     if use_explicit_subs {
@@ -223,6 +229,14 @@ struct NumberShiftApplier<A> {
     applier: A,
 }
 
+struct NumberShiftApplier2<A> {
+    var: Var,
+    shift: i32,
+    new_var: Var,
+    applier: A,
+}
+
+
 impl<A> Applier<DBRise, DBRiseAnalysis> for NumberShiftApplier<A> where A: Applier<DBRise, DBRiseAnalysis> {
     fn apply_one(&self, egraph: &mut DBRiseEGraph, eclass: Id, subst: &Subst,
                  searcher_ast: Option<&PatternAst<DBRise>>, rule_name: Symbol) -> Vec<Id> {
@@ -234,6 +248,18 @@ impl<A> Applier<DBRise, DBRiseAnalysis> for NumberShiftApplier<A> where A: Appli
         let mut subst = subst.clone();
         subst.insert(self.new_var, egraph.add(shifted));
         self.applier.apply_one(egraph, eclass, &subst, searcher_ast, rule_name)
+    }
+}
+
+impl<A> Applier<DBRise, DBRiseAnalysis> for NumberShiftApplier2<A> where A: Applier<DBRise, DBRiseAnalysis> {
+    fn apply_one(&self, egraph: &mut DBRiseEGraph, eclass: Id, subst: &Subst,
+                 searcher_ast: Option<&PatternAst<DBRise>>, rule_name: Symbol) -> Vec<Id> {
+        if let Some(i) = egraph[subst[self.var]].nodes.iter().filter_map(|x| match x { DBRise::Var(i) => Some(i), _=>None }).next() {
+            let shifted = DBRise::Var(Index((i.0 as i32 + self.shift) as _));
+            let mut subst = subst.clone();
+            subst.insert(self.new_var, egraph.add(shifted));
+            self.applier.apply_one(egraph, eclass, &subst, searcher_ast, rule_name)
+        } else { vec![] }
     }
 }
 

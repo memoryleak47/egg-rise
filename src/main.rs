@@ -168,7 +168,7 @@ fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[
         ("explicit", "DeBruijn") => 
             to_db_prove_equiv_aux(start, goal, dbrules(
                 &([
-                    "eta", "beta", 
+                    "eta", "eta-expansion", "beta",
                     "sig-unused", "phi-unused",
                     "sig-lam", "sig-app", "sig-var-const",
                     "phi-lam", "phi-app", "phi-var-const"
