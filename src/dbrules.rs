@@ -7,8 +7,29 @@ fn var(s: &str) -> Var {
     s.parse().unwrap()
 }
 
+fn var_to_num(v: Var) -> impl Fn(&mut DBRiseEGraph, Id, &Subst) -> i64 {
+    move |egraph, _, subst| {
+        for x in egraph[subst[v]].nodes.iter() {
+            let DBRise::Number(i) = x else { continue };
+            return *i as i64;
+        }
+        panic!();
+    }
+}
+
 fn contains_ident(v1: Var, index: Index) -> impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool {
     move |egraph, _, subst| egraph[subst[v1]].data.free.contains(&index)
+}
+
+// checks whether v2 or something bigger comes up in b, or in other words whether removing v2 would index shift something in v2.
+fn in_range(b: Var, v2: Var) -> impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool {
+    move |egraph, a, subst| {
+        let idx = var_to_num(v2)(egraph, a, subst);
+        let b_max = egraph[subst[b]].data.free.iter().max();
+        if let Some(b_x) = b_max {
+            b_x.0 as i64 >= idx
+        } else { false }
+    }
 }
 
 fn neg(f: impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool) -> impl Fn(&mut DBRiseEGraph, Id, &Subst) -> bool {
@@ -103,9 +124,12 @@ pub fn dbrules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<DBRise, D
             // TODO: if conditions should be recursive filters?
             if neg(contains_ident(var("?f"), Index(0)))),
 
+        rewrite!("sig-unused"; "(sig ?i ?body ?e)" => "?body" if neg(in_range(var("?body"), var("?i")))),
+        rewrite!("phi-unused"; "(phi ?i ?j ?body)" => "?body" if neg(in_range(var("?body"), var("?j")))),
+
         // explicit substitution / shifting
         rewrite!("sig-lam"; "(sig ?i (lam ?a) ?b)" =>
-            { NumberShiftApplier { var: var("?i"), shift: 1, new_var: var("?ip1"), 
+            { NumberShiftApplier { var: var("?i"), shift: 1, new_var: var("?ip1"),
               applier: "(lam (sig ?ip1 ?a ?b))".parse::<Pattern<DBRise>>().unwrap() } }),
         rewrite!("sig-app"; "(sig ?i (app ?a1 ?a2) ?b)" => "(app (sig ?i ?a1 ?b) (sig ?i ?a2 ?b))"),
         rewrite!("sig-var-const"; "(sig ?i ?n ?b)" =>

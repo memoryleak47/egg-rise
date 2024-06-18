@@ -169,6 +169,7 @@ fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[
             to_db_prove_equiv_aux(start, goal, dbrules(
                 &([
                     "eta", "beta", 
+                    "sig-unused", "phi-unused",
                     "sig-lam", "sig-app", "sig-var-const",
                     "phi-lam", "phi-app", "phi-var-const"
                 ].iter().cloned().chain(rule_names.iter().cloned()).collect::<Vec<_>>()),
