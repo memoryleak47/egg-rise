@@ -99,17 +99,6 @@ fn to_db(e: RecExpr<Rise>) -> DBRiseExpr {
     r.into()
 }
 
-fn dbnormalize(e: &DBRiseExpr) -> DBRiseExpr {
-    let norm_rules = dbrules(&[
-        "eta", "beta"
-    ], false);
-    let runner = Runner::default().with_expr(e).run(&norm_rules);
-    let (egraph, root) = (runner.egraph, runner.roots[0]);
-    let mut extractor = Extractor::new(&egraph, AstSize);
-    let (_, normalized) = extractor.find_best(root);
-    normalized
-}
-
 fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str],
                      _substitution: &str, binding: &str,
                      should_normalize: bool) {
@@ -191,20 +180,6 @@ fn prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<Rewrite
     // count_alpha_equiv(&mut runner.egraph);
     // runner.egraph.dot().to_svg(format!("/tmp/{}.svg", name)).unwrap();
     runner.egraph.check_goals(id, &goals);
-}
-
-fn db_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[&str]) {
-    println!();
-    println!("{}", name);
-
-    println!("start: {}", start_s);
-    println!("goal : {}", goal_s);
-    let start = dbnormalize(&start_s.parse().unwrap());
-    let goal = dbnormalize(&goal_s.parse().unwrap());
-    println!("normalized start: {}", start);
-    println!("normalized goal: {}", goal);
-
-    db_prove_equiv_aux(start, goal, dbrules(rule_names, false));
 }
 
 fn db_prove_equiv_aux(start: RecExpr<DBRise>, goal: RecExpr<DBRise>, rules: Vec<Rewrite<DBRise, DBRiseAnalysis>>) {
