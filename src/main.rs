@@ -239,28 +239,8 @@ fn main() {
 
     match name {
         "reduction" => {
-            let start =
-                "(app (lam compose
-                    (app (lam add1
-                        (app (app (var compose) (var add1))
-                            (app (app (var compose) (var add1))
-                                (app (app (var compose) (var add1))
-                                    (app (app (var compose) (var add1))
-                                        (app (app (var compose) (var add1))
-                                                (app (app (var compose) (var add1))
-                                                    (var add1)))))))
-                    ) (lam y (app (app add (var y)) 1)))
-                  ) (lam f (lam g (lam x (app (var f)
-                                         (app (var g) (var x)))))))".into();
-            let goal =
-                "(lam x (app (app add
-                            (app (app add
-                                (app (app add
-                                    (app (app add
-                                        (app (app add
-                                            (app (app add
-                                                (app (app add
-                                                    (var x)) 1)) 1)) 1)) 1)) 1)) 1)) 1))".into();
+            let start = "(app (lam compose (app (lam add1 (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (var add1)))))))) (lam y (app (app add (var y)) 1)))) (lam f (lam g (lam x (app (var f) (app (var g) (var x)))))))".into();
+            let goal = "(lam x (app (app add (app (app add (app (app add (app (app add (app (app add (app (app add (app (app add (var x)) 1)) 1)) 1)) 1)) 1)) 1)) 1))".into();
             bench(start, goal, &[], false)
         },
         "fission" => {
