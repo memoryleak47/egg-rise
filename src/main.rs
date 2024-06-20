@@ -299,9 +299,8 @@ fn main() {
     let name = "lambda-compose-many";
     let binding = "name";
 
-    let substitution = "explicit";
     let bench = |start, goal, rules, should_norm| {
-        bench_prove_equiv(name, start, goal, rules, substitution, binding, should_norm);
+        bench_prove_equiv(name, start, goal, rules, "explicit", binding, should_norm);
     };
     
     match name {
