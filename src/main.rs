@@ -131,12 +131,11 @@ fn dbnormalize(e: &DBRiseExpr) -> DBRiseExpr {
 }
 
 fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[&str],
-                     substitution: &str, binding: &str,
+                     _substitution: &str, binding: &str,
                      should_normalize: bool) {
     println!();
     println!("-------");
     println!("- goal:         {}", name);
-    println!("- substitution: {}", substitution);
     println!("- binding:      {}", binding);
     println!("-------");
     println!();
@@ -148,8 +147,8 @@ fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[
     println!("start: {}", start);
     println!("goal: {}", goal);
 
-    match (substitution, binding) {
-        ("explicit", "name") =>
+    match binding {
+        "name" =>
             prove_equiv_aux(start, goal, rules(
                 &([
                     "eta", "beta",
@@ -159,13 +158,7 @@ fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[
                 ].iter().cloned().chain(rule_names.iter().cloned()).collect::<Vec<_>>()),
                 true
             )),
-        ("extraction", "name") =>
-            prove_equiv_aux(start, goal, rules(
-                &(["eta", "beta"].iter().cloned().chain(rule_names.iter().cloned())
-                .collect::<Vec<_>>()),
-                false
-            )),
-        ("explicit", "DeBruijn") => 
+        "DeBruijn" =>
             to_db_prove_equiv_aux(start, goal, dbrules(
                 &([
                     "eta", "eta-expansion", "beta",
@@ -175,13 +168,7 @@ fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[
                 ].iter().cloned().chain(rule_names.iter().cloned()).collect::<Vec<_>>()),
                 true
             )),
-        ("extraction", "DeBruijn") => 
-            to_db_prove_equiv_aux(start.clone(), goal.clone(), dbrules(
-                &(["eta", "beta"].iter().cloned().chain(rule_names.iter().cloned())
-                .collect::<Vec<_>>()),
-                false
-            )),
-        _ => panic!("did not expect {} and {}", substitution, binding)
+        _ => panic!("did not expect {}", binding)
     }
 
     println!();
@@ -204,7 +191,7 @@ fn prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<Rewrite
     let goals: Vec<Pattern<Rise>> = vec![goal];
     let mut runner = Runner::default()
         .with_expr(&start);
-    
+
     // NOTE this is a bit of hack, we rely on the fact that the
     // initial root is the last expr added by the runner. We can't
     // use egraph.find_expr(start) because it may have been pruned
@@ -302,11 +289,11 @@ fn main() {
     let bench = |start, goal, rules, should_norm| {
         bench_prove_equiv(name, start, goal, rules, "explicit", binding, should_norm);
     };
-    
+
     match name {
         "lambda-compose-many" => {
-            let start = 
-                "(app (lam compose 
+            let start =
+                "(app (lam compose
                     (app (lam add1
                         (app (app (var compose) (var add1))
                             (app (app (var compose) (var add1))
@@ -318,7 +305,7 @@ fn main() {
                     ) (lam y (app (app add (var y)) 1)))
                   ) (lam f (lam g (lam x (app (var f)
                                          (app (var g) (var x)))))))".into();
-            let goal = 
+            let goal =
                 "(lam x (app (app add
                             (app (app add
                                 (app (app add
