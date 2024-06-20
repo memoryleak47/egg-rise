@@ -302,77 +302,13 @@ fn main() {
         _ => panic!("expected 3 arguments")
     };
 
-    let fission_fusion_rules = &["map-fusion", "map-fission"];
-    let fissioned = format!("(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 {})))))",
-        "(app map (var f1))".then("(app map (var f2))").then("(app map (var f3))").then("(app map (var f4))").then("(app map (var f5))"));
-    let half_fused = format!("(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 {})))))",
-        format!("(app map {})", "(var f1)".then("(var f2)")).then(format!("(app map {})", "(var f3)".then("(var f4)").then("(var f5)"))));
-    let fused = format!("(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 {})))))",
-        format!("(app map {})", "(var f1)".then("(var f2)").then("(var f3)").then("(var f4)").then("(var f5)")));
-
-    let tmp = "(app map (app (app slide 3) 1))".then("(app (app slide 3) 1)").then("(app map transpose)");
-    let slide2d_3_1 = tmp.as_str();
-    // (lam mt (app (app mul (app fst (var mt))) (app snd (var mt))))
-    // \mt. (app (app mul (app fst mt)) (app snd mt)))
-    // \mt. (mul (fst mt) (snd mt))
-    let tmp = format!("(lam a (lam b {}))", "(app (app zip (var a)) (var b))".pipe("(app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt)))))").pipe("(app (app reduce add) 0)"));
-    let dot = tmp.as_str();
-    let dot2: String = format!("{}", expr_fresh_alpha_rename(dot.parse().unwrap()));
-    let base = slide2d_3_1.then(format!(
-        "(app map (app map (lam nbh (app (app {} (app join weights2d)) (app join (var nbh))))))", dot));
-    let factorised = slide2d_3_1.then(format!(
-        "(app map (app map {}))", format!("(app map (app {} weightsH))", dot).then(format!("(app {} weightsV)", dot2))
-    ));
-    let factorised_vh = slide2d_3_1.then(format!(
-        "(app map (app map {}))", "transpose".then(format!("(app map (app {} weightsV))", dot)).then(format!("(app {} weightsH)", dot2))
-    ));
-    let scanline = "(app (app slide 3) 1)".then(format!(
-        "(app map {})",
-            "transpose".then(
-            format!("(app map (app {} weightsV))", dot)).then(
-            "(app (app slide 3) 1)").then(
-            format!("(app map (app {} weightsH))", dot2))
-    ));
-    let separated = "(app (app slide 3) 1)".then(
-        format!("(app map {})", "transpose".then(format!("(app map (app {} weightsV))", dot)))).then(
-        format!("(app map {})", "(app (app slide 3) 1)".then(format!("(app map (app {} weightsH))", dot2)))
-    );
-
-    let scanline_rules = &[
-        "remove-transpose-pair", "map-fusion", "map-fission",
-        "slide-before-map", "map-slide-before-transpose", "slide-before-map-map-f",
-        "separate-dot-vh-simplified", "separate-dot-hv-simplified"];
-
     let bench = |start, goal, rules, should_norm| {
         bench_prove_equiv(name, start, goal, rules, substitution, binding, should_norm);
     };
     
     match name {
-        "simple-eta-reduction" =>
-            bench(
-                "(app (lam x (app map (var x))) f)".into(),
-                "(app map f)".into(),
-                &[], false
-            ),
-        "lambda-under" =>
-            bench(
-                "(lam x (app (app add 4) (app (lam y (var y)) 4)))".into(),
-                "(lam x (app (app add 4) 4))".into(),
-                &[], false
-            ),
-        "lambda-compose" =>
-            bench(
-                "(app (lam compose 
-                    (app (lam add1 
-                      (app (app (var compose) (var add1)) (var add1))
-                    ) (lam y (app (app add (var y)) 1)))
-                  ) (lam f (lam g (lam x (app (var f)
-                                         (app (var g) (var x)))))))".into(),
-                "(lam x (app (app add (app (app add (var x)) 1)) 1))".into(),
-                &[], false
-            ),
-        "lambda-compose-many" =>
-            bench(
+        "lambda-compose-many" => {
+            let start = 
                 "(app (lam compose 
                     (app (lam add1
                         (app (app (var compose) (var add1))
@@ -384,7 +320,8 @@ fn main() {
                                                     (var add1)))))))
                     ) (lam y (app (app add (var y)) 1)))
                   ) (lam f (lam g (lam x (app (var f)
-                                         (app (var g) (var x)))))))".into(),
+                                         (app (var g) (var x)))))))".into();
+            let goal = 
                 "(lam x (app (app add
                             (app (app add
                                 (app (app add
@@ -392,26 +329,42 @@ fn main() {
                                         (app (app add
                                             (app (app add
                                                 (app (app add
-                                                    (var x)) 1)) 1)) 1)) 1)) 1)) 1)) 1))".into(),
-                &[], false
-            ),
-        "map-fusion" => 
-            bench(fissioned, half_fused, fission_fusion_rules, true),
-        "map-fission" =>
-            bench(fused, fissioned, fission_fusion_rules, true),
-        "map-fission-fusion" =>
-            bench(fused, half_fused, fission_fusion_rules, true),
-        "base-to-factorised" =>
-            bench(base, factorised,
-                &["separate-dot-vh-simplified", "separate-dot-hv-simplified"], true),
-        "base-to-factorised-VH" =>
-            bench(base, factorised_vh,
-                &["separate-dot-vh-simplified", "separate-dot-hv-simplified"], true),
-        "scanline-to-separated" =>
-            bench(scanline, separated,
-                &["map-fission", "map-fusion"], true),
-        "base-to-scanline" =>
-            bench(base, scanline, scanline_rules, true),
+                                                    (var x)) 1)) 1)) 1)) 1)) 1)) 1)) 1))".into();
+            bench(start, goal, &[], false)
+        },
+        "map-fission-fusion" => {
+            let half_fused = format!("(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 {})))))",
+                format!("(app map {})", "(var f1)".then("(var f2)")).then(format!("(app map {})", "(var f3)".then("(var f4)").then("(var f5)"))));
+            let fused = format!("(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 {})))))",
+                format!("(app map {})", "(var f1)".then("(var f2)").then("(var f3)").then("(var f4)").then("(var f5)")));
+
+            bench(fused, half_fused, &["map-fusion", "map-fission"], true)
+        },
+        "base-to-scanline" => {
+            let tmp = format!("(lam a (lam b {}))", "(app (app zip (var a)) (var b))".pipe("(app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt)))))").pipe("(app (app reduce add) 0)"));
+            let dot = tmp.as_str();
+
+            let dot2: String = format!("{}", expr_fresh_alpha_rename(dot.parse().unwrap()));
+
+            let tmp = "(app map (app (app slide 3) 1))".then("(app (app slide 3) 1)").then("(app map transpose)");
+            let slide2d_3_1 = tmp.as_str();
+            let base = slide2d_3_1.then(format!(
+                "(app map (app map (lam nbh (app (app {} (app join weights2d)) (app join (var nbh))))))", dot));
+            let scanline = "(app (app slide 3) 1)".then(format!(
+                "(app map {})",
+                    "transpose".then(
+                    format!("(app map (app {} weightsV))", dot)).then(
+                    "(app (app slide 3) 1)").then(
+                    format!("(app map (app {} weightsH))", dot2))
+            ));
+
+            let scanline_rules = &[
+                "remove-transpose-pair", "map-fusion", "map-fission",
+                "slide-before-map", "map-slide-before-transpose", "slide-before-map-map-f",
+                "separate-dot-vh-simplified", "separate-dot-hv-simplified"
+            ];
+            bench(base, scanline, scanline_rules, true)
+        },
         _ => panic!("did not expect {}", name)
     }
 }
