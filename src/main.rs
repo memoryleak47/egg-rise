@@ -14,8 +14,8 @@ fn main() {
 }
 
 fn run(name: &str, binding: &str, exp: WithExpansion) {
-    let bench = |start, goal, rules, should_norm| {
-        bench_prove_equiv(name, start, goal, rules, "explicit", binding, should_norm);
+    let bench = |start, goal, rules| {
+        bench_prove_equiv(name, start, goal, rules, "explicit", binding, false);
     };
 
     let mut rules = vec!["beta", "eta"];
@@ -28,13 +28,13 @@ fn run(name: &str, binding: &str, exp: WithExpansion) {
         "reduction" => {
             let start = "(app (lam compose (app (lam add1 (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (var add1)))))))) (lam y (app (app add (var y)) 1)))) (lam f (lam g (lam x (app (var f) (app (var g) (var x)))))))";
             let goal = "(lam x (app (app add (app (app add (app (app add (app (app add (app (app add (app (app add (app (app add (var x)) 1)) 1)) 1)) 1)) 1)) 1)) 1))";
-            bench(start, goal, &rules, false)
+            bench(start, goal, &rules)
         },
         "fission" => {
             let start = "(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 (app map (lam x11 (app (var f5) (app (var f4) (app (var f3) (app (var f2) (app (var f1) (var x11)))))))))))))";
             let goal =  "(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 (lam x7 (app (app map (lam x6 (app (var f5) (app (var f4) (app (var f3) (var x6)))))) (app (app map (lam x4 (app (var f2) (app (var f1) (var x4))))) (var x7)))))))))";
             rules.extend(["map-fusion", "map-fission"]);
-            bench(start, goal, &rules, true)
+            bench(start, goal, &rules)
         },
         "binomial" => {
             let start = "(lam x17 (app (app map (app map (lam nbh (app (app (app reduce add) 0) (app (app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt))))) (app (app zip (app join weights2d)) (app join (var nbh)))))))) (app (app map transpose) (app (app (app slide 3) 1) (app (app map (app (app slide 3) 1)) (var x17))))))";
@@ -45,7 +45,7 @@ fn run(name: &str, binding: &str, exp: WithExpansion) {
                 "slide-before-map", "map-slide-before-transpose", "slide-before-map-map-f",
                 "separate-dot-vh-simplified", "separate-dot-hv-simplified"
             ]);
-            bench(start, goal, &rules, true)
+            bench(start, goal, &rules)
         },
         _ => panic!("did not expect {}", name)
     }
@@ -60,17 +60,6 @@ use crate::dbrules::*;
 // use crate::scheduler::*;
 use crate::alpha_equiv::*;
 use crate::dbrise::DBRiseExpr;
-
-fn normalize(e: &RecExpr<Rise>) -> RecExpr<Rise> {
-    let norm_rules = rules(&[
-        "eta", "beta"
-    ], false);
-    let runner = Runner::default().with_expr(e).run(&norm_rules);
-    let (egraph, root) = (runner.egraph, runner.roots[0]);
-    let mut extractor = Extractor::new(&egraph, AstSize);
-    let (_, normalized) = extractor.find_best(root);
-    normalized
-}
 
 fn to_db_str<S: AsRef<str>>(e: S) -> String {
     format!("{}", to_db(e.as_ref().parse().unwrap()))
@@ -133,8 +122,8 @@ fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str
 
     let start_p: RecExpr<Rise> = start_s.parse().unwrap();
     let goal_p: RecExpr<Rise> = goal_s.parse().unwrap();
-    let start = if should_normalize { normalize(&start_p) } else { start_p };
-    let goal = if should_normalize { normalize(&goal_p) } else { goal_p };
+    let start = start_p;
+    let goal = goal_p;
     println!("start: {}", start);
     println!("goal: {}", goal);
 
@@ -166,18 +155,6 @@ fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str
     }
 
     println!();
-}
-
-
-fn prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[&str]) {
-    println!();
-    println!("{}", name);
-
-    let start = normalize(&start_s.parse().unwrap());
-    let goal = normalize(&goal_s.parse().unwrap());
-    println!("starting from {}", start);
-
-    prove_equiv_aux(start, goal, rules(rule_names, false));
 }
 
 fn prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<Rewrite<Rise, RiseAnalysis>>) {
@@ -262,10 +239,6 @@ fn db_prove_equiv_aux(start: RecExpr<DBRise>, goal: RecExpr<DBRise>, rules: Vec<
     println!("applied rules: {}", rules);
     runner.iterations.iter().for_each(|i| println!("{:?}", i));
     runner.egraph.check_goals(id, &goals);
-}
-
-fn to_db_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[&str]) {
-    db_prove_equiv(name, to_db_str(start_s), to_db_str(goal_s), rule_names)
 }
 
 fn to_db_prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<Rewrite<DBRise, DBRiseAnalysis>>) {
