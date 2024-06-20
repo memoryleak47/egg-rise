@@ -283,15 +283,15 @@ fn to_db_prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<R
 }
 
 fn main() {
-    let name = "lambda-compose-many";
-    let binding = "name";
+    let name = "binomial";
+    let binding = "DeBruijn";
 
     let bench = |start, goal, rules, should_norm| {
         bench_prove_equiv(name, start, goal, rules, "explicit", binding, should_norm);
     };
 
     match name {
-        "lambda-compose-many" => {
+        "reduction" => {
             let start =
                 "(app (lam compose
                     (app (lam add1
@@ -316,38 +316,21 @@ fn main() {
                                                     (var x)) 1)) 1)) 1)) 1)) 1)) 1)) 1))".into();
             bench(start, goal, &[], false)
         },
-        "map-fission-fusion" => {
-            let half_fused = format!("(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 {})))))",
-                format!("(app map {})", "(var f1)".then("(var f2)")).then(format!("(app map {})", "(var f3)".then("(var f4)").then("(var f5)"))));
-            let fused = format!("(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 {})))))",
-                format!("(app map {})", "(var f1)".then("(var f2)").then("(var f3)").then("(var f4)").then("(var f5)")));
-
-            bench(fused, half_fused, &["map-fusion", "map-fission"], true)
+        "fission" => {
+            let start = "(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 (app map (lam x3 (app (var f5) (app (lam x2 (app (var f4) (app (lam x1 (app (var f3) (app (lam x0 (app (var f2) (app (var f1) (var x0)))) (var x1)))) (var x2)))) (var x3))))))))))".into();
+            let goal = "(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 (lam x7 (app (app map (lam x6 (app (var f5) (app (lam x5 (app (var f4) (app (var f3) (var x5)))) (var x6))))) (app (app map (lam x4 (app (var f2) (app (var f1) (var x4))))) (var x7)))))))))".into();
+            bench(start, goal, &["map-fusion", "map-fission"], true)
         },
-        "base-to-scanline" => {
-            let tmp = format!("(lam a (lam b {}))", "(app (app zip (var a)) (var b))".pipe("(app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt)))))").pipe("(app (app reduce add) 0)"));
-            let dot = tmp.as_str();
+        "binomial" => {
+            let start =  "(lam x5 (app (app map (app map (lam nbh (app (app (lam a (lam b (app (app (app reduce add) 0) (app (app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt))))) (app (app zip (var a)) (var b)))))) (app join weights2d)) (app join (var nbh)))))) (app (lam x4 (app (app map transpose) (app (lam x3 (app (app (app slide 3) 1) (app (app map (app (app slide 3) 1)) (var x3)))) (var x4)))) (var x5))))".into();
+            let goal = "(lam x9 (app (app map (lam x8 (app (app map (app (lam x0 (lam x1 (app (app (app reduce add) 0) (app (app map (lam x2 (app (app mul (app fst (var x2))) (app snd (var x2))))) (app (app zip (var x0)) (var x1)))))) weightsH)) (app (lam x7 (app (app (app slide 3) 1) (app (lam x6 (app (app map (app (lam a (lam b (app (app (app reduce add) 0) (app (app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt))))) (app (app zip (var a)) (var b)))))) weightsV)) (app transpose (var x6)))) (var x7)))) (var x8))))) (app (app (app slide 3) 1) (var x9))))".into();
 
-            let dot2: String = format!("{}", expr_fresh_alpha_rename(dot.parse().unwrap()));
-
-            let tmp = "(app map (app (app slide 3) 1))".then("(app (app slide 3) 1)").then("(app map transpose)");
-            let slide2d_3_1 = tmp.as_str();
-            let base = slide2d_3_1.then(format!(
-                "(app map (app map (lam nbh (app (app {} (app join weights2d)) (app join (var nbh))))))", dot));
-            let scanline = "(app (app slide 3) 1)".then(format!(
-                "(app map {})",
-                    "transpose".then(
-                    format!("(app map (app {} weightsV))", dot)).then(
-                    "(app (app slide 3) 1)").then(
-                    format!("(app map (app {} weightsH))", dot2))
-            ));
-
-            let scanline_rules = &[
+            let rules = &[
                 "remove-transpose-pair", "map-fusion", "map-fission",
                 "slide-before-map", "map-slide-before-transpose", "slide-before-map-map-f",
                 "separate-dot-vh-simplified", "separate-dot-hv-simplified"
             ];
-            bench(base, scanline, scanline_rules, true)
+            bench(start, goal, rules, true)
         },
         _ => panic!("did not expect {}", name)
     }
