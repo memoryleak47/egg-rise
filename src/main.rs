@@ -296,12 +296,10 @@ fn to_db_prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<R
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let (name, substitution, binding) = match &args[..] {
-        [_, n, s, b] => (&n as &str, &s as &str, &b as &str),
-        _ => panic!("expected 3 arguments")
-    };
+    let name = "lambda-compose-many";
+    let binding = "name";
 
+    let substitution = "explicit";
     let bench = |start, goal, rules, should_norm| {
         bench_prove_equiv(name, start, goal, rules, substitution, binding, should_norm);
     };
