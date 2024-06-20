@@ -7,36 +7,45 @@ mod dbrules;
 mod dbsubstitute;
 mod scheduler;
 
-fn main() {
-    let name = "binomial";
-    let binding = "de-bruijn";
+enum WithExpansion { Yes, No }
 
+fn main() {
+    run("binomial", "de-bruijn", WithExpansion::No);
+}
+
+fn run(name: &str, binding: &str, exp: WithExpansion) {
     let bench = |start, goal, rules, should_norm| {
         bench_prove_equiv(name, start, goal, rules, "explicit", binding, should_norm);
     };
+
+    let mut rules = vec!["beta", "eta"];
+
+    if let WithExpansion::Yes = exp {
+        rules.push("eta-expansion");
+    }
 
     match name {
         "reduction" => {
             let start = "(app (lam compose (app (lam add1 (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (app (app (var compose) (var add1)) (var add1)))))))) (lam y (app (app add (var y)) 1)))) (lam f (lam g (lam x (app (var f) (app (var g) (var x)))))))";
             let goal = "(lam x (app (app add (app (app add (app (app add (app (app add (app (app add (app (app add (app (app add (var x)) 1)) 1)) 1)) 1)) 1)) 1)) 1))";
-            bench(start, goal, &[], false)
+            bench(start, goal, &rules, false)
         },
         "fission" => {
-
             let start = "(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 (app map (lam x11 (app (var f5) (app (var f4) (app (var f3) (app (var f2) (app (var f1) (var x11)))))))))))))";
             let goal =  "(lam f1 (lam f2 (lam f3 (lam f4 (lam f5 (lam x7 (app (app map (lam x6 (app (var f5) (app (var f4) (app (var f3) (var x6)))))) (app (app map (lam x4 (app (var f2) (app (var f1) (var x4))))) (var x7)))))))))";
-            bench(start, goal, &["map-fusion", "map-fission"], true)
+            rules.extend(["map-fusion", "map-fission"]);
+            bench(start, goal, &rules, true)
         },
         "binomial" => {
             let start = "(lam x17 (app (app map (app map (lam nbh (app (app (app reduce add) 0) (app (app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt))))) (app (app zip (app join weights2d)) (app join (var nbh)))))))) (app (app map transpose) (app (app (app slide 3) 1) (app (app map (app (app slide 3) 1)) (var x17))))))";
             let goal = "(lam x26 (app (app map (lam x25 (app (app map (lam x15 (app (app (app reduce add) 0) (app (app map (lam x16 (app (app mul (app fst (var x16))) (app snd (var x16))))) (app (app zip weightsH) (var x15)))))) (app (app (app slide 3) 1) (app (app map (lam b (app (app (app reduce add) 0) (app (app map (lam mt (app (app mul (app fst (var mt))) (app snd (var mt))))) (app (app zip weightsV) (var b)))))) (app transpose (var x25))))))) (app (app (app slide 3) 1) (var x26))))";
 
-            let rules = &[
+            rules.extend([
                 "remove-transpose-pair", "map-fusion", "map-fission",
                 "slide-before-map", "map-slide-before-transpose", "slide-before-map-map-f",
                 "separate-dot-vh-simplified", "separate-dot-hv-simplified"
-            ];
-            bench(start, goal, rules, true)
+            ]);
+            bench(start, goal, &rules, true)
         },
         _ => panic!("did not expect {}", name)
     }
@@ -129,27 +138,30 @@ fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str
     println!("start: {}", start);
     println!("goal: {}", goal);
 
+    let mut rule_names: Vec<&str> = rule_names.iter().cloned().collect();
     match binding {
-        "name" =>
-            prove_equiv_aux(start, goal, rules(
-                &([
-                    "eta", "beta",
+        "name" => {
+            if rule_names.contains(&"beta") {
+                rule_names.extend([
                     "opt:let-unused",
                     "opt:let-app", "opt:let-var-same",
                     "opt:let-lam-same", "opt:let-lam-diff",
-                ].iter().cloned().chain(rule_names.iter().cloned()).collect::<Vec<_>>()),
-                true
-            )),
-        "de-bruijn" =>
-            to_db_prove_equiv_aux(start, goal, dbrules(
-                &([
-                    "eta", "eta-expansion", "beta",
+                ]);
+            }
+
+            prove_equiv_aux(start, goal, rules(&*rule_names, true))
+        },
+        "de-bruijn" => {
+            if rule_names.contains(&"beta") {
+                rule_names.extend([
                     "sig-unused", "phi-unused",
                     "sig-lam", "sig-app", "sig-var-const",
                     "phi-lam", "phi-app", "phi-var-const"
-                ].iter().cloned().chain(rule_names.iter().cloned()).collect::<Vec<_>>()),
-                true
-            )),
+                ]);
+            }
+
+            to_db_prove_equiv_aux(start, goal, dbrules(&*rule_names, true))
+        },
         _ => panic!("did not expect {}", binding)
     }
 
