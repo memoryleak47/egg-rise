@@ -17,59 +17,6 @@ use crate::dbrules::*;
 use crate::alpha_equiv::*;
 use crate::dbrise::DBRiseExpr;
 
-static mut COUNTER: u32 = 0;
-pub fn fresh_id() -> u32 {
-    unsafe {
-        let c = COUNTER;
-        COUNTER += 1;
-        c
-    }
-}
-
-fn lambda(f: impl FnOnce(&str) -> String) -> String {
-    let n = fresh_id();
-    let x = format!("x{}", n);
-    format!("(lam {} {})", x, f(x.as_str()))
-}
-
-trait DSL {
-    // f1 >> f2
-    fn then<S: Into<String>>(self, other: S) -> String;
-    // f1 >> f2 (DB)
-    fn thendb<S: Into<String>>(self, other: S) -> String;
-    // v |> f
-    fn pipe<S: Into<String>>(self, other: S) -> String;
-}
-
-impl DSL for String {
-    fn then<S: Into<String>>(self, other: S) -> String {
-        let c = fresh_id();
-        format!("(lam x{} (app {} (app {} (var x{}))))", c, other.into(), self, c)
-    }
-
-    fn thendb<S: Into<String>>(self, other: S) -> String {
-        format!("(lam (app {} (app {} %0)))",
-                crate::dbsubstitute::shift_copy(&other.into().parse().unwrap(), true, Index(0)),
-                crate::dbsubstitute::shift_copy(&self.parse().unwrap(), true, Index(0)))
-    }
-
-    fn pipe<S: Into<String>>(self, other: S) -> String {
-        format!("(app {} {})", other.into(), self)
-    }
-}
-
-impl DSL for &str {
-    fn then<S: Into<String>>(self, other: S) -> String {
-        String::from(self).then(other)
-    }
-    fn thendb<S: Into<String>>(self, other: S) -> String {
-        String::from(self).thendb(other)
-    }
-    fn pipe<S: Into<String>>(self, other: S) -> String {
-        String::from(self).pipe(other)
-    }
-}
-
 fn normalize(e: &RecExpr<Rise>) -> RecExpr<Rise> {
     let norm_rules = rules(&[
         "eta", "beta"
@@ -158,7 +105,7 @@ fn bench_prove_equiv(name: &str, start_s: String, goal_s: String, rule_names: &[
                 ].iter().cloned().chain(rule_names.iter().cloned()).collect::<Vec<_>>()),
                 true
             )),
-        "DeBruijn" =>
+        "de-bruijn" =>
             to_db_prove_equiv_aux(start, goal, dbrules(
                 &([
                     "eta", "eta-expansion", "beta",
@@ -284,7 +231,7 @@ fn to_db_prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<R
 
 fn main() {
     let name = "binomial";
-    let binding = "DeBruijn";
+    let binding = "de-bruijn";
 
     let bench = |start, goal, rules, should_norm| {
         bench_prove_equiv(name, start, goal, rules, "explicit", binding, should_norm);

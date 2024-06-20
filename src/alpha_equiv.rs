@@ -1,7 +1,15 @@
 use egg::*;
 use crate::rise::*;
-use crate::fresh_id;
 use std::collections::{HashMap, HashSet};
+
+static mut COUNTER: u32 = 0;
+pub fn fresh_id() -> u32 {
+    unsafe {
+        let c = COUNTER;
+        COUNTER += 1;
+        c
+    }
+}
 
 pub fn expr_to_alpha_equiv_pattern(e: RecExpr<Rise>) -> Pattern<Rise> {
     use std::str::FromStr;
