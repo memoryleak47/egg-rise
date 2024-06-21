@@ -26,17 +26,6 @@ fn or(f1: impl Fn(&mut RiseEGraph, Id, &Subst) -> bool, f2: impl Fn(&mut RiseEGr
     move |egraph, id, subst| f1(egraph, id, subst) || f2(egraph, id, subst)
 }
 
-fn is_const(v: Var) -> impl Fn(&mut RiseEGraph, Id, &Subst) -> bool {
-    move |egraph, _, subst| {
-        let e: &[Rise] = egraph[subst[v]].data.beta_extract.as_ref();
-        (e.len() == 1) && match e[0] {
-            Rise::Symbol(_) => true,
-            Rise::Number(_) => true,
-            _ => false,
-        }
-    }
-}
-
 pub fn rules(names: &[&str]) -> Vec<Rewrite<Rise, RiseAnalysis>> {
     let all_rules = vec![
         // algorithmic
@@ -112,7 +101,6 @@ pub fn rules(names: &[&str]) -> Vec<Rewrite<Rise, RiseAnalysis>> {
             { with_fresh_var("?sdvh", "(app (app (app reduce add) 0) (app (app map (lam ?x (app (app mul (app fst (var ?x))) (app snd (var ?x)))))
                 (app (app zip weightsH) (app (app map (lam ?sdvh (app (app (app reduce add) 0) (app (app map (lam ?x (app (app mul (app fst (var ?x))) (app snd (var ?x)))))
                 (app (app zip weightsV) (var ?sdvh)))))) (app transpose ?nbh)))))") }),
-
 
 
         // GENERAL:
