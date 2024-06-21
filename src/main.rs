@@ -157,10 +157,9 @@ fn prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<Rewrite
     let goals2 = goals.clone();
     runner = runner
         .with_scheduler(SimpleScheduler)
-        //.with_scheduler(Scheduler::default())
-        .with_node_limit(10_000_000)
-        .with_iter_limit(50)
-        .with_time_limit(std::time::Duration::from_secs(240)) // 4mn
+        .with_node_limit(100_000_000)
+        .with_iter_limit(500)
+        .with_time_limit(std::time::Duration::from_secs(60*60)) // 4mn
         .with_hook(move |r| {
             if goals2.iter().all(|g| g.search_eclass(&r.egraph, id).is_some()) {
                 Err("Done".into())
@@ -192,10 +191,9 @@ fn db_prove_equiv_aux(start: RecExpr<DBRise>, goal: RecExpr<DBRise>, rules: Vec<
     let goals2 = goals.clone();
     runner = runner
         .with_scheduler(SimpleScheduler)
-        //.with_scheduler(Scheduler::default())
-        .with_node_limit(10_000_000)
-        .with_iter_limit(50)
-        .with_time_limit(std::time::Duration::from_secs(240)) // 4mn
+        .with_node_limit(100_000_000)
+        .with_iter_limit(500)
+        .with_time_limit(std::time::Duration::from_secs(60*60)) // 4mn
         .with_hook(move |r| {
             //r.egraph.dot().to_svg(format!("/tmp/egg{}.svg", r.iterations.len())).unwrap();
             if goals2.iter().all(|g| g.search_eclass(&r.egraph, id).is_some()) {
