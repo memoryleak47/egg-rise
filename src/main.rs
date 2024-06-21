@@ -7,19 +7,20 @@ mod dbrules;
 enum WithExpansion { Yes, No }
 
 fn main() {
-    run("reduction", "de-bruijn", WithExpansion::No);
-}
+    let args: Vec<String> = std::env::args().skip(1).collect();
 
-fn run(name: &str, binding: &str, exp: WithExpansion) {
-    let bench = |start, goal, rules| {
-        bench_prove_equiv(name, start, goal, rules, binding);
-    };
+    let name = &*args[0];
+    let binding = &*args[1];
 
     let mut rules = vec!["beta", "eta"];
 
-    if let WithExpansion::Yes = exp {
+    if let Some("eta-exp") = args.get(2).map(|x| &**x) {
         rules.push("eta-expansion");
     }
+
+    let bench = |start, goal, rules| {
+        bench_prove_equiv(name, start, goal, rules, binding);
+    };
 
     match name {
         "reduction" => {

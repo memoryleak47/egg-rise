@@ -1,27 +1,28 @@
 #!/bin/bash
 
-NAMES=("lambda-compose-many"
-"map-fission-fusion"
-"base-to-scanline")
+set -e
+cargo b --release
+mkdir outputs -p
+rm -f outputs/*
 
-SUBSTITUTIONS=("explicit"
-"extraction")
+function run() {
+    (
+        echo $1 $2 $3
+        echo ----------------
+        /usr/bin/time -f "%E, %M Kbytes" timeout -v 10m ./target/release/egg-rise $1 $2 $3
+    ) |& tee outputs/$1_$2_$3.txt
 
-BINDINGS=("name"
-"DeBruijn")
+    echo
+    echo
+    echo
+}
 
-cargo build --release
-mkdir -p results
-rm results/*
+binding=de-bruijn
 
-for name in "${NAMES[@]}"
-do
-    for subs in "${SUBSTITUTIONS[@]}"
-    do
-        for bind in "${BINDINGS[@]}"
-        do
-            echo "benchmark: $name $subs $bind"
-            name=$name subs=$subs bind=$bind systemd-run --user --scope -p MemoryLimit=2000M ./bench_aux.sh
-        done
-    done
-done
+run reduction $binding
+run fission $binding
+run binomial $binding
+
+run reduction $binding eta-exp
+run fission $binding eta-exp
+run binomial $binding eta-exp
