@@ -15,7 +15,7 @@ fn main() {
 
 fn run(name: &str, binding: &str, exp: WithExpansion) {
     let bench = |start, goal, rules| {
-        bench_prove_equiv(name, start, goal, rules, "explicit", binding, false);
+        bench_prove_equiv(name, start, goal, rules, binding);
     };
 
     let mut rules = vec!["beta", "eta"];
@@ -99,9 +99,7 @@ fn to_db(e: RecExpr<Rise>) -> DBRiseExpr {
     r.into()
 }
 
-fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str],
-                     _substitution: &str, binding: &str,
-                     should_normalize: bool) {
+fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str], binding: &str) {
     println!();
     println!("-------");
     println!("- goal:         {}", name);
