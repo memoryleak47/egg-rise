@@ -75,7 +75,7 @@ pub fn rules(names: &[&str]) -> Vec<Rewrite<Rise, RiseAnalysis>> {
         rewrite!("beta"; "(app (lam ?v ?body) ?e)" => "(let ?v ?e ?body)"),
 
         // OPTIMIZED:
-        rewrite!("opt:let-unused"; "(let ?v ?t ?body)" => "?body"),// if neg(contains_ident(var("?body"), var("?v")))),
+        rewrite!("opt:let-unused"; "(let ?v ?t ?body)" => "?body"), if neg(contains_ident(var("?body"), var("?v")))),
         rewrite!("opt:let-app"; "(let ?v ?e (app ?a ?b))" => "(app (let ?v ?e ?a) (let ?v ?e ?b))" if or(contains_ident(var("?a"), var("?v")), contains_ident(var("?b"), var("?v")))),
         rewrite!("opt:let-var-same"; "(let ?v1 ?e (var ?v1))" => "?e"),
         rewrite!("opt:let-lam-same"; "(let ?v1 ?e (lam ?v1 ?body))" => "(lam ?v1 ?body)"),
