@@ -38,22 +38,6 @@ pub fn rules(names: &[&str]) -> Vec<Rewrite<Rise, RiseAnalysis>> {
             // TODO: if conditions should be recursive filters?
             if neg(contains_ident(var("?f"), var("?x")))),
 
-        rewrite!("map-fusion-then";
-            "(>> (app map ?f) (app map ?g))" => "(app map (>> ?f ?g))"),
-        rewrite!("map-fission-then";
-            "(app map (>> ?f ?g))" => "(>> (app map ?f) (app map ?g))"),
-        rewrite!("then-assoc-1"; "(>> ?f (>> ?g ?h))" => "(>> (>> ?f ?g) ?h)"),
-        rewrite!("then-assoc-2"; "(>> (>> ?f ?g) ?h)" => "(>> ?f (>> ?g ?h))"),
-        rewrite!("transpose-pair-after-then";
-                 "?f" => "(>> (>> ?f transpose) transpose)"),
-        rewrite!("map-map-f-before-transpose-then";
-                 "(>> (app map (app map ?f)) transpose)" =>
-                 "(>> transpose (app map (app map ?f)))"),
-        rewrite!("split-join-then";
-                 "(app map ?f)" => "(>> (>> split (app map (app map ?f))) join)"),
-        // rewrite!("split-join-then";
-        //         "(app map ?f)" => "(>> split (>> (app map (app map ?f)) join))"),
-
         // reductions
         rewrite!("eta"; "(lam ?v (app ?f (var ?v)))" => "?f"
             // TODO: if conditions should be recursive filters?
@@ -65,30 +49,14 @@ pub fn rules(names: &[&str]) -> Vec<Rewrite<Rise, RiseAnalysis>> {
         rewrite!("map-slide-before-transpose";
             "(app transpose (app (app map (app (app slide ?sz) ?sp)) ?y))" =>
             "(app (app map transpose) (app (app (app slide ?sz) ?sp) (app transpose ?y)))"),
-        rewrite!("map-split-before-transpose";
-            "(app transpose (app (app map (app split ?n)) ?y))" =>
-            "(app (app map transpose) (app (app split ?n) (app transpose ?y)))"),
         rewrite!("slide-before-map-map-f";
             "(app (app map (app map ?f)) (app (app (app slide ?sz) ?sp) ?y))" =>
             "(app (app (app slide ?sz) ?sp) (app (app map ?f) ?y))"),
-        rewrite!("split-before-map-map-f";
-            "(app (app map (app map ?f)) (app (app split ?n) ?y))" =>
-            "(app (app split ?n) (app (app map ?f) ?y))"),
         rewrite!("slide-before-map";
             "(app (app (app slide ?sz) ?sp) (app (app map ?f) ?y))" =>
             "(app (app map (app map ?f)) (app (app (app slide ?sz) ?sp) ?y))"),
 
-        // lowering
-        rewrite!("reduce-seq-unroll"; "reduce" => "reduceSeqUnroll"),
-        rewrite!("map-seq"; "map" => "mapSeq"),
-        rewrite!("iterate-stream"; "map" => "iterateStream"),
-        rewrite!("to-mem-after-map-seq";
-            "(app (app mapSeq ?f) ?x)" => "(app toMem (app (app mapSeq ?f) ?x))"),
-        rewrite!("rotate-values-simplified";
-            "(app (app slide ?sz) 1)" => "(app rotateValues ?sz)"),
-
         // domain-specific
-        // mulT = (lam x (app (app mul (app fst (var x))) (app snd (var x))))
         rewrite!("separate-dot-hv-simplified";
             "(app (app (app reduce add) 0) (app (app map (lam ?x (app (app mul (app fst (var ?x))) (app snd (var ?x)))))
              (app (app zip (app join weights2d)) (app join ?nbh))))" =>

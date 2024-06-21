@@ -53,31 +53,14 @@ pub fn dbrules(names: &[&str]) -> Vec<Rewrite<DBRise, DBRiseAnalysis>> {
         rewrite!("map-slide-before-transpose";
             "(app transpose (app (app map (app (app slide ?sz) ?sp)) ?y))" =>
             "(app (app map transpose) (app (app (app slide ?sz) ?sp) (app transpose ?y)))"),
-        rewrite!("map-split-before-transpose";
-            "(app transpose (app (app map (app split ?n)) ?y))" =>
-            "(app (app map transpose) (app (app split ?n) (app transpose ?y)))"),
         rewrite!("slide-before-map-map-f";
             "(app (app map (app map ?f)) (app (app (app slide ?sz) ?sp) ?y))" =>
             "(app (app (app slide ?sz) ?sp) (app (app map ?f) ?y))"),
-        rewrite!("split-before-map-map-f";
-            "(app (app map (app map ?f)) (app (app split ?n) ?y))" =>
-            "(app (app split ?n) (app (app map ?f) ?y))"),
         rewrite!("slide-before-map";
             "(app (app (app slide ?sz) ?sp) (app (app map ?f) ?y))" =>
             "(app (app map (app map ?f)) (app (app (app slide ?sz) ?sp) ?y))"),
 
-        // lowering
-        rewrite!("reduce-seq-unroll"; "reduce" => "reduceSeqUnroll"),
-        rewrite!("map-seq"; "map" => "mapSeq"),
-        rewrite!("iterate-stream"; "map" => "iterateStream"),
-        rewrite!("to-mem-after-map-seq";
-            "(app (app mapSeq ?f) ?x)" => "(app toMem (app (app mapSeq ?f) ?x))"),
-        rewrite!("rotate-values-simplified";
-            "(app (app slide ?sz) 1)" => "(app rotateValues ?sz)"),
-
         // domain-specific
-
-        // mulT = (lam (app (app mul (app fst %0)) (app snd %0)))
         rewrite!("separate-dot-hv-simplified";
             "(app (app (app reduce add) 0) (app (app map (lam (app (app mul (app fst %0)) (app snd %0))))
              (app (app zip (app join weights2d)) (app join ?nbh))))" =>
@@ -90,7 +73,6 @@ pub fn dbrules(names: &[&str]) -> Vec<Rewrite<DBRise, DBRiseAnalysis>> {
             "(app (app (app reduce add) 0) (app (app map (lam (app (app mul (app fst %0)) (app snd %0))))
              (app (app zip weightsH) (app (app map (lam (app (app (app reduce add) 0) (app (app map (lam (app (app mul (app fst %0)) (app snd %0))))
              (app (app zip weightsV) %0))))) (app transpose ?nbh)))))"),
-
 
 
         // algorithmic
@@ -146,7 +128,6 @@ struct NumberShiftApplier2<A> {
     new_var: Var,
     applier: A,
 }
-
 
 impl<A> Applier<DBRise, DBRiseAnalysis> for NumberShiftApplier<A> where A: Applier<DBRise, DBRiseAnalysis> {
     fn apply_one(&self, egraph: &mut DBRiseEGraph, eclass: Id, subst: &Subst,
