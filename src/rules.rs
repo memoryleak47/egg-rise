@@ -86,6 +86,8 @@ pub fn rules(names: &[&str]) -> Vec<Rewrite<Rise, RiseAnalysis>> {
                if_free: "(lam ?fresh (let ?v1 ?e (let ?v2 (var ?fresh) ?body)))".parse().unwrap(),
            }}
            if and(is_not_same_var(var("?v1"), var("?v2")), contains_ident(var("?body"), var("?v1")))),
+
+        rewrite!("eta-expansion"; "?f" => { with_fresh_var("?eexp", "(lam ?eexp (app ?f (var ?eexp)))") }),
     ];
     let mut map: HashMap<Symbol, _> = all_rules.into_iter().map(|r| (r.name.to_owned(), r)).collect();
     names.into_iter().map(|&n| map.remove(&Symbol::new(n)).expect("rule not found")).collect()

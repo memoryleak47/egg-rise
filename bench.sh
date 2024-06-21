@@ -17,7 +17,7 @@ function run() {
     echo
 }
 
-binding=de-bruijn
+binding=name
 
 run reduction $binding
 run fission $binding
