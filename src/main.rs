@@ -1,16 +1,13 @@
 mod rise;
 mod rules;
-mod substitute;
 mod alpha_equiv;
 mod dbrise;
 mod dbrules;
-mod dbsubstitute;
-mod scheduler;
 
 enum WithExpansion { Yes, No }
 
 fn main() {
-    run("binomial", "de-bruijn", WithExpansion::No);
+    run("reduction", "de-bruijn", WithExpansion::No);
 }
 
 fn run(name: &str, binding: &str, exp: WithExpansion) {
@@ -125,7 +122,7 @@ fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str
                 ]);
             }
 
-            prove_equiv_aux(start, goal, rules(&*rule_names, true))
+            prove_equiv_aux(start, goal, rules(&*rule_names))
         },
         "de-bruijn" => {
             if rule_names.contains(&"beta") {
@@ -136,7 +133,7 @@ fn bench_prove_equiv(name: &str, start_s: &str, goal_s: &str, rule_names: &[&str
                 ]);
             }
 
-            to_db_prove_equiv_aux(start, goal, dbrules(&*rule_names, true))
+            to_db_prove_equiv_aux(start, goal, dbrules(&*rule_names))
         },
         _ => panic!("did not expect {}", binding)
     }

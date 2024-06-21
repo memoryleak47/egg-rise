@@ -1,6 +1,5 @@
 use egg::*;
 use crate::rise::*;
-use crate::substitute::*;
 use std::collections::HashMap;
 
 fn var(s: &str) -> Var {
@@ -38,8 +37,8 @@ fn is_const(v: Var) -> impl Fn(&mut RiseEGraph, Id, &Subst) -> bool {
     }
 }
 
-pub fn rules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<Rise, RiseAnalysis>> {
-    let common = vec![
+pub fn rules(names: &[&str]) -> Vec<Rewrite<Rise, RiseAnalysis>> {
+    let all_rules = vec![
         // algorithmic
         rewrite!("map-fusion";
             "(app (app map ?f) (app (app map ?g) ?arg))" =>
@@ -113,12 +112,9 @@ pub fn rules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<Rise, RiseA
             { with_fresh_var("?sdvh", "(app (app (app reduce add) 0) (app (app map (lam ?x (app (app mul (app fst (var ?x))) (app snd (var ?x)))))
                 (app (app zip weightsH) (app (app map (lam ?sdvh (app (app (app reduce add) 0) (app (app map (lam ?x (app (app mul (app fst (var ?x))) (app snd (var ?x)))))
                 (app (app zip weightsV) (var ?sdvh)))))) (app transpose ?nbh)))))") }),
-    ];
-    let extraction_substitution = vec![
-        rewrite!("beta"; "(app (lam ?v ?body) ?e)" =>
-            { BetaExtractApplier { v: var("?v"), e: var("?e"), body: var("?body") } }),
-    ];
-    let explicit_substitution = vec![
+
+
+
         // GENERAL:
         rewrite!("beta"; "(app (lam ?v ?body) ?e)" => "(let ?v ?e ?body)"),
 
@@ -134,75 +130,9 @@ pub fn rules(names: &[&str], use_explicit_subs: bool) -> Vec<Rewrite<Rise, RiseA
                if_free: "(lam ?fresh (let ?v1 ?e (let ?v2 (var ?fresh) ?body)))".parse().unwrap(),
            }}
            if and(is_not_same_var(var("?v1"), var("?v2")), contains_ident(var("?body"), var("?v1")))),
-
-        // UNOPTIMIZED:
-        /*
-        rewrite!("let-app"; "(let ?v ?e (app ?a ?b))" => "(app (let ?v ?e ?a) (let ?v ?e ?b))"),
-        rewrite!("let-var-same"; "(let ?v1 ?e (var ?v1))" => "?e"),
-        rewrite!("let-var-diff"; "(let ?v1 ?e (var ?v2))" => "(var ?v2)"
-            if is_not_same_var(var("?v1"), var("?v2"))),
-        rewrite!("let-lam-same"; "(let ?v1 ?e (lam ?v1 ?body))" => "(lam ?v1 ?body)"),
-        rewrite!("let-lam-diff"; "(let ?v1 ?e (lam ?v2 ?body))" =>
-            { CaptureAvoid {
-                fresh: var("?fresh"), v2: var("?v2"), e: var("?e"),
-                if_not_free: "(lam ?v2 (let ?v1 ?e ?body))".parse().unwrap(),
-                if_free: "(lam ?fresh (let ?v1 ?e (let ?v2 (var ?fresh) ?body)))".parse().unwrap(),
-            }}
-            if is_not_same_var(var("?v1"), var("?v2"))),
-        rewrite!("let-const"; "(let ?v ?e ?c)" => "?c" if is_const(var("?c"))),
-        */
     ];
-    let mut map: HashMap<Symbol, _> = common.into_iter().map(|r| (r.name.to_owned(), r)).collect();
-    if use_explicit_subs {
-        map.extend(explicit_substitution.into_iter().map(|r| (r.name.to_owned(), r)));
-    } else {
-        map.extend(extraction_substitution.into_iter().map(|r| (r.name.to_owned(), r)));
-    }
+    let mut map: HashMap<Symbol, _> = all_rules.into_iter().map(|r| (r.name.to_owned(), r)).collect();
     names.into_iter().map(|&n| map.remove(&Symbol::new(n)).expect("rule not found")).collect()
-}
-
-struct BetaApplier {
-    v: Var,
-    e: Var,
-    body: Var,
-}
-
-impl Applier<Rise, RiseAnalysis> for BetaApplier {
-    fn apply_one(&self, egraph: &mut RiseEGraph, eclass: Id, subst: &Subst,
-                 _searcher_ast: Option<&PatternAst<Rise>>, rule_name: Symbol) -> Vec<Id> {
-        let new_id = substitute_eclass(
-            egraph, subst[self.v], subst[self.e], subst[self.body]);
-        egraph.union(eclass, new_id);
-        vec![new_id]
-    }
-}
-
-struct BetaExtractApplier {
-    v: Var,
-    e: Var,
-    body: Var,
-}
-
-impl Applier<Rise, RiseAnalysis> for BetaExtractApplier {
-    fn apply_one(&self, egraph: &mut RiseEGraph, eclass: Id, subst: &Subst,
-                 _searcher_ast: Option<&PatternAst<Rise>>, rule_name: Symbol) -> Vec<Id> {
-        let ex_body = &egraph[subst[self.body]].data.beta_extract;
-        let ex_e = &egraph[subst[self.e]].data.beta_extract;
-        let v_sym = {
-            let ns = &egraph[subst[self.v]].nodes;
-            if ns.len() != 1 {
-                panic!("expected symbol, found {:?}", ns);
-            }
-            match &ns[0] {
-                &Rise::Symbol(sym) => sym,
-                n => panic!("expected symbol, found {:?}", n)
-            }
-        };
-        let result = substitute_expr(v_sym, ex_e, ex_body);
-        let id = egraph.add_expr(&result);
-        egraph.union(eclass, id);
-        vec![id]
-    }
 }
 
 fn with_fresh_var(name: &str, pattern: &str) -> MakeFresh {
