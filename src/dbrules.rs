@@ -108,21 +108,13 @@ pub fn dbrules(names: &[&str]) -> Vec<Rewrite<DBRise, DBRiseAnalysis>> {
         rewrite!("phi-var-const"; "(phi ?i ?k ?n)" =>
             { PhiVarConstApplier { i: var("?i"), k: var("?k"), n: var("?n") }}),
 
-        rewrite!("eta-expansion"; "?f" =>
-            { NumberShiftApplier2 { var: var("?f"), new_var: var("?fd"), shift: 1, applier: "(lam (app ?fd %0))".parse::<Pattern<DBRise>>().unwrap()}})
+        rewrite!("eta-expansion"; "?f" => "(lam (app (phi 1 0 ?f) %0))"),
     ];
     let mut map: HashMap<Symbol, _> = all_rules.into_iter().map(|r| (r.name.to_owned(), r)).collect();
     names.into_iter().map(|&n| map.remove(&Symbol::new(n)).expect("rule not found")).collect()
 }
 
 struct NumberShiftApplier<A> {
-    var: Var,
-    shift: i32,
-    new_var: Var,
-    applier: A,
-}
-
-struct NumberShiftApplier2<A> {
     var: Var,
     shift: i32,
     new_var: Var,
@@ -140,18 +132,6 @@ impl<A> Applier<DBRise, DBRiseAnalysis> for NumberShiftApplier<A> where A: Appli
         let mut subst = subst.clone();
         subst.insert(self.new_var, egraph.add(shifted));
         self.applier.apply_one(egraph, eclass, &subst, searcher_ast, rule_name)
-    }
-}
-
-impl<A> Applier<DBRise, DBRiseAnalysis> for NumberShiftApplier2<A> where A: Applier<DBRise, DBRiseAnalysis> {
-    fn apply_one(&self, egraph: &mut DBRiseEGraph, eclass: Id, subst: &Subst,
-                 searcher_ast: Option<&PatternAst<DBRise>>, rule_name: Symbol) -> Vec<Id> {
-        if let Some(i) = egraph[subst[self.var]].nodes.iter().filter_map(|x| match x { DBRise::Var(i) => Some(i), _=>None }).next() {
-            let shifted = DBRise::Var(Index((i.0 as i32 + self.shift) as _));
-            let mut subst = subst.clone();
-            subst.insert(self.new_var, egraph.add(shifted));
-            self.applier.apply_one(egraph, eclass, &subst, searcher_ast, rule_name)
-        } else { vec![] }
     }
 }
 
