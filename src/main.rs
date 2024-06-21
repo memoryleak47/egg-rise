@@ -161,6 +161,7 @@ fn prove_equiv_aux(start: RecExpr<Rise>, goal: RecExpr<Rise>, rules: Vec<Rewrite
         .with_iter_limit(500)
         .with_time_limit(std::time::Duration::from_secs(60*60)) // 4mn
         .with_hook(move |r| {
+            dbg!(r.egraph.total_number_of_nodes());
             if goals2.iter().all(|g| g.search_eclass(&r.egraph, id).is_some()) {
                 Err("Done".into())
             } else {
@@ -195,7 +196,7 @@ fn db_prove_equiv_aux(start: RecExpr<DBRise>, goal: RecExpr<DBRise>, rules: Vec<
         .with_iter_limit(500)
         .with_time_limit(std::time::Duration::from_secs(60*60)) // 4mn
         .with_hook(move |r| {
-            //r.egraph.dot().to_svg(format!("/tmp/egg{}.svg", r.iterations.len())).unwrap();
+            dbg!(r.egraph.total_number_of_nodes());
             if goals2.iter().all(|g| g.search_eclass(&r.egraph, id).is_some()) {
                 Err("Done".into())
             } else {
