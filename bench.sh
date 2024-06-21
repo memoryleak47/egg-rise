@@ -9,7 +9,7 @@ function run() {
     (
         echo $1 $2 $3
         echo ----------------
-        /usr/bin/time -f "%E, %M Kbytes" timeout -v 10m ./target/release/egg-rise $1 $2 $3
+        /usr/bin/time -f "%E, %M Kbytes" timeout -v 5m ./target/release/egg-rise $1 $2 $3
     ) |& tee outputs/$1_$2_$3.txt
 
     echo
